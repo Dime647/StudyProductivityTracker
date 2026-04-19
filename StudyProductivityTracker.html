@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Productivity Tracker</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:linear-gradient(135deg,#0f172a,#1e1b4b,#111827);color:#f8fafc;min-height:100vh;}
+header{background:linear-gradient(90deg,#7c3aed,#ec4899,#f97316);padding:20px;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+header h2{margin:0;letter-spacing:.5px}
+nav{display:flex;justify-content:center;gap:12px;padding:14px;background:rgba(255,255,255,.06);backdrop-filter:blur(10px)}
+nav button{width:auto;padding:10px 18px;border:none;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#3b82f6);color:white;font-weight:700;cursor:pointer;transition:.25s}
+nav button:hover{transform:translateY(-2px) scale(1.03)}
+.container{padding:20px;max-width:900px;margin:auto}
+.card{background:rgba(255,255,255,.08);padding:18px;margin:12px 0;border-radius:18px;border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 30px rgba(0,0,0,.25)}
+input,button{margin:6px 0;padding:10px;width:100%;border-radius:10px;border:none}
+input{background:rgba(255,255,255,.12);color:white;outline:none}
+input::placeholder{color:#cbd5e1}
+button{background:linear-gradient(90deg,#8b5cf6,#ec4899);font-weight:700;color:white;cursor:pointer;transition:.25s}
+button:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.hidden{display:none}
+#timer{font-size:30px;text-align:center;color:#22d3ee;font-weight:800;margin:10px 0;text-shadow:0 0 14px rgba(34,211,238,.45)}
+li{display:flex;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;background:rgba(255,255,255,.06);border-radius:10px}
+.completed{text-decoration:line-through;color:#94a3b8}
+.progress-bar{background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:10px;height:12px}
+.progress{height:12px;background:linear-gradient(90deg,#22c55e,#06b6d4,#3b82f6);width:0%;transition:.3s}
+.quote{margin-top:10px;font-style:italic;color:#fde68a;background:rgba(255,255,255,.05);padding:10px;border-radius:12px}
+h3,h4{color:#f0abfc}
+</style>
+</head>
+<body>
+
+<header><h2>Study Productivity Tracker</h2></header>
+
+<div id="mainUI">
+<nav>
+  <button onclick="showSection('productivity')">Productivity</button>
+  <button onclick="showSection('gpa')">GPA</button>
+</nav>
+
+<div class="container">
+
+<div id="productivity" class="card">
+<h3>Tasks</h3>
+<input id="taskInput" placeholder="Enter task">
+<button onclick="addTask()">Add Task</button>
+<ul id="taskList"></ul>
+<h4>Completed Today</h4>
+<button onclick="resetTasks()">Reset Tasks</button>
+<ul id="completedList"></ul>
+
+<h3>Study Timer</h3>
+<p id="timer">00:00</p>
+<button onclick="startTimer()">Start</button>
+<button onclick="stopTimer()">Stop</button>
+<button onclick="resetTimer()">Reset</button>
+
+<h4>Study Progress</h4>
+<div class="progress-bar"><div id="progress" class="progress"></div></div>
+</div>
+
+<div id="gpa" class="card hidden">
+<h3>GPA Calculator</h3>
+<input id="ut1" placeholder="UT1 (10)">
+<input id="ut2" placeholder="UT2 (10)">
+<input id="practical" placeholder="Practical (15)">
+<input id="lab" placeholder="Lab (10)">
+<input id="term" placeholder="Term End (100)">
+<button onclick="calculateGPA()">Calculate</button>
+<p id="grade"></p>
+<p id="gpaRes"></p>
+
+<h3>Set Target GPA</h3>
+<input id="targetGPA" placeholder="Enter target GPA (6-10)">
+<button onclick="analyzeGoal()">Analyze</button>
+<p id="suggestion"></p>
+
+<h3>Motivation</h3>
+<p id="quote" class="quote"></p>
+<button onclick="newQuote()">New Quote</button>
+</div>
+
+</div>
+</div>
+
+<script>
+function showSection(id){
+ document.querySelectorAll('.card').forEach(el=>el.classList.add('hidden'));
+ document.getElementById(id).classList.remove('hidden');
+}
+
+// TASKS
+function addTask(){
+ let task=taskInput.value;
+ let tasks=JSON.parse(localStorage.getItem("tasks")||"[]");
+ tasks.push({text:task,done:false,date:new Date().toDateString()});
+ localStorage.setItem("tasks",JSON.stringify(tasks));
+ loadTasks();
+}
+
+function toggleTask(i){
+ let tasks=JSON.parse(localStorage.getItem("tasks"));
+ tasks[i].done=!tasks[i].done;
+ localStorage.setItem("tasks",JSON.stringify(tasks));
+ loadTasks();
+}
+
+function loadTasks(){
+ let list=taskList; let comp=completedList;
+ list.innerHTML=""; comp.innerHTML="";
+ let tasks=JSON.parse(localStorage.getItem("tasks")||"[]");
+ let today=new Date().toDateString();
+ tasks.forEach((t,i)=>{
+  let li=document.createElement("li");
+  li.innerHTML=`<span class='${t.done?"completed":""}'>${t.text}</span>
+  <input type='checkbox' ${t.done?"checked":""} onclick='toggleTask(${i})'>`;
+  if(t.done && t.date===today) comp.appendChild(li);
+  else if(!t.done) list.appendChild(li);
+ });
+}
+
+// TIMER
+let time=0; let timerInterval=null;
+function startTimer(){
+ if(timerInterval) return;
+ timerInterval=setInterval(()=>{
+  time++;
+  let m=Math.floor(time/60);
+  let s=time%60;
+  timer.innerHTML=(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+  document.getElementById("progress").style.width=(time%3600)/36+"%";
+ },1000);
+}
+function stopTimer(){clearInterval(timerInterval); timerInterval=null;}
+function resetTimer(){stopTimer(); time=0; timer.innerHTML="00:00"; document.getElementById("progress").style.width="0%";}
+
+// GPA
+function calculateGPA(){
+ let ut1=Number(document.getElementById("ut1").value);
+ let ut2=Number(document.getElementById("ut2").value);
+ let practical=Number(document.getElementById("practical").value);
+ let lab=Number(document.getElementById("lab").value);
+ let term=Number(document.getElementById("term").value);
+
+ if(ut1>10||ut2>10||practical>15||lab>10||term>100){alert("Invalid marks");return;}
+
+ let totalICA=ut1+ut2+practical+lab+5;
+ let totalMarks=totalICA+(term/2);
+
+ let grade=""; let credit=0;
+ if(totalMarks>90){grade="O";credit=10;}
+ else if(totalMarks>80){grade="A+";credit=9;}
+ else if(totalMarks>=70){grade="A";credit=8;}
+ else if(totalMarks>=60){grade="B";credit=7;}
+ else if(totalMarks>=50){grade="C";credit=6;}
+ else {grade="F";}
+
+ let gradeEl=document.getElementById("grade");
+ let gpaEl=document.getElementById("gpaRes");
+
+ gradeEl.innerHTML="Grade: "+grade;
+ gpaEl.innerHTML=(grade==="F")?"GPA not calculated":"GPA: "+credit;
+
+ localStorage.setItem("currentGPA",credit);
+}
+
+// GOAL ANALYSIS
+function analyzeGoal(){
+ let target=Number(document.getElementById("targetGPA").value);
+ let current=Number(localStorage.getItem("currentGPA")||0);
+ let msg="";
+
+ if(target>10||target<6){msg="Enter valid GPA (6-10)";}
+ else if(target<=current){msg="You are already at or above your goal! Keep it up 🔥";}
+ else if(target-current<=1){msg="Very achievable! Stay consistent 💪";}
+ else if(target-current<=2){msg="Needs more effort. Increase study time 📚";}
+ else{msg="Challenging goal. Plan properly and stay disciplined 🚀";}
+
+ document.getElementById("suggestion").innerHTML=msg;
+}
+
+// QUOTES
+let quotes=[
+"Success is the sum of small efforts repeated daily.",
+"Push yourself, because no one else will.",
+"Discipline beats motivation.",
+"Small progress is still progress.",
+"Don’t stop until you’re proud."
+];
+
+function newQuote(){
+ let q=quotes[Math.floor(Math.random()*quotes.length)];
+ document.getElementById("quote").innerHTML=q;
+}
+
+function resetTasks(){
+ localStorage.removeItem("tasks");
+ loadTasks();
+}
+
+newQuote();
+loadTasks();
+</script>
+
+</body>
+</html>
